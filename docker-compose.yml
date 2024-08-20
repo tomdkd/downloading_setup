@@ -1,0 +1,90 @@
+version: '3'
+services:
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./config/transmission:/config
+      - ./downloads:/downloads
+      - ./config/watch:/watch
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    restart: always
+    networks:
+      - downloader_network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+    networks:
+      - downloader_network
+  
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./config/radarr:/config
+      - ./downloads/complete:/movies
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+    depends_on:
+      - transmission
+      - prowlarr
+    networks:
+      - downloader_network
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./config/sonarr:/config
+      - ./downloads/complete:/tv
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+    depends_on:
+      - transmission
+      - prowlarr
+    networks:
+      - downloader_network
+  
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=hcaptcha-solver
+      - TZ=Europe/London
+    ports:
+      - 8191:8191
+    restart: unless-stopped
+    networks:
+      - downloader_network
+
+networks:
+  downloader_network:
